@@ -28,7 +28,19 @@ const AGE_OPTIONS: Array<{ value: AgeGroup; label: string }> = [
 ];
 
 const ONSET_OPTIONS = ["Sudden", "Gradual", "Over days", "Unsure"] as const;
+const PROVOCATION_OPTIONS = [
+  "Worse with movement",
+  "Worse with breathing",
+  "Worse after eating",
+  "Nothing clear",
+] as const;
 const QUALITY_OPTIONS = ["Sharp", "Dull", "Burning", "Pressure", "Other"] as const;
+const RADIATION_OPTIONS = [
+  "Stays in one place",
+  "Moves to arm/jaw",
+  "Moves to back",
+  "Unsure",
+] as const;
 const TIMING_OPTIONS = ["Constant", "Comes and goes", "Worse at night"] as const;
 
 const tapButtonClass =
@@ -107,6 +119,17 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
           }
         />
         <OptionRow
+          legend="What makes it better or worse?"
+          options={PROVOCATION_OPTIONS}
+          selected={value.anamnesis.provocation}
+          onSelect={(provocation) =>
+            onChange({
+              ...value,
+              anamnesis: { ...value.anamnesis, provocation },
+            })
+          }
+        />
+        <OptionRow
           legend="What does it feel like?"
           options={QUALITY_OPTIONS}
           selected={value.anamnesis.quality}
@@ -114,6 +137,17 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
             onChange({
               ...value,
               anamnesis: { ...value.anamnesis, quality },
+            })
+          }
+        />
+        <OptionRow
+          legend="Does it move anywhere?"
+          options={RADIATION_OPTIONS}
+          selected={value.anamnesis.radiation}
+          onSelect={(radiation) =>
+            onChange({
+              ...value,
+              anamnesis: { ...value.anamnesis, radiation },
             })
           }
         />

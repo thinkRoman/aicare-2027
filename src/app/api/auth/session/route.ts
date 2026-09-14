@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   clearAuthenticatedSession,
-  createUserId,
   getAuthenticatedSession,
   setAuthenticatedSession,
+  userIdFromEmail,
 } from "@/lib/security/auth";
 
 export const runtime = "nodejs";
@@ -61,9 +61,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
+    const email = parsed.data.email.toLowerCase();
     const session = {
-      userId: createUserId(),
-      email: parsed.data.email.toLowerCase(),
+      userId: userIdFromEmail(email),
+      email,
     };
     await setAuthenticatedSession(session);
     return NextResponse.json({

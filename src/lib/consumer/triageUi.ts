@@ -21,9 +21,9 @@ export type ConsumerTriageEmergency = {
 
 export type ConsumerTriageFailure = {
   ok: false;
-  code: "MALFORMED_MODEL_OUTPUT" | "BYOK_EXECUTION_FAILED" | "AI_FAILURE";
-  message: string;
-  retryable: true;
+  code?: "MALFORMED_MODEL_OUTPUT" | "BYOK_EXECUTION_FAILED" | "AI_FAILURE" | string;
+  message?: string;
+  retryable?: boolean;
 };
 
 export type ConsumerTriageResponse =

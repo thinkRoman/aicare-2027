@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 export const USER_SESSION_COOKIE_NAME = "aicare_user_session";
@@ -8,6 +8,16 @@ export type AuthenticatedSession = {
   userId: string;
   email: string;
 };
+
+/**
+ * Stable server-derived user id from email. Never trusts a client-supplied user id.
+ */
+export function userIdFromEmail(email: string): string {
+  return createHash("sha256")
+    .update(`aicare-user:${email.trim().toLowerCase()}`)
+    .digest("hex")
+    .slice(0, 32);
+}
 
 function sessionSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET?.trim();
