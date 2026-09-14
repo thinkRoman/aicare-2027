@@ -3,6 +3,7 @@ import { AnthropicAdapter } from "@/services/ai/adapters/AnthropicAdapter";
 import type { IAIProviderAdapter } from "@/services/ai/adapters/IAIProviderAdapter";
 import { LocalCompatibleAdapter } from "@/services/ai/adapters/LocalCompatibleAdapter";
 import { OpenAIAdapter } from "@/services/ai/adapters/OpenAIAdapter";
+import { mongoByokRepository } from "@/services/ai/byokRepository";
 import {
   assertImplementedProvider,
   assertNonBlankModel,
@@ -54,12 +55,7 @@ export type AIServiceDependencies = {
   }) => IAIProviderAdapter;
 };
 
-const defaultRepository: ByokConfigRepository = {
-  async findActiveByUserId(): Promise<ByokRecord | null> {
-    // Gate 4 persists and loads BYOK via API; Gate 3 keeps this injectable.
-    return null;
-  },
-};
+const defaultRepository: ByokConfigRepository = mongoByokRepository;
 
 function createDefaultOpenAIAdapter(options: {
   apiKey: string;

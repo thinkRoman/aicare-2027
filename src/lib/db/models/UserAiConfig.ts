@@ -49,6 +49,7 @@ export const UserAiConfigSchema = new Schema(
         message: "selectedModel is required and must not be empty",
       },
     },
+    disabled: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: { createdAt: false, updatedAt: true },
