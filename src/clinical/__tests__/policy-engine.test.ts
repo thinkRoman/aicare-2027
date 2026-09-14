@@ -117,4 +117,20 @@ describe("Gate 1 clinical policy engine", () => {
     expect(evaluation.result.disposition).not.toBe("self_care");
     expect(evaluation.result.clinicalFlags).toContain("vision.degraded_quality");
   });
+
+  it("escalates when candidate disposition conflicts with high-concern language", () => {
+    const evaluation = postInferenceArbiter(
+      routineResult({
+        disposition: "routine",
+        rationale: "Notes mention an emergency red flag pattern.",
+        plainEnglishSummary: "High-concern findings were described.",
+      }),
+      baseEncounter(),
+    );
+
+    expect(evaluation.matchedRuleIds).toContain(
+      "emergency.v1.inconsistency_escalation",
+    );
+    expect(evaluation.result.disposition).toBe("urgent");
+  });
 });

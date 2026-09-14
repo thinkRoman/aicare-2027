@@ -70,17 +70,15 @@ export function verifyUserSessionToken(
     const decoded = JSON.parse(
       Buffer.from(payload, "base64url").toString("utf8"),
     ) as { userId?: unknown; email?: unknown };
-    if (
-      typeof decoded.userId !== "string" ||
-      decoded.userId.trim() === "" ||
-      typeof decoded.email !== "string" ||
-      decoded.email.trim() === ""
-    ) {
+    if (typeof decoded.email !== "string" || decoded.email.trim() === "") {
       return null;
     }
+    const email = decoded.email.trim().toLowerCase();
+    // Always re-derive userId from email. Never trust a payload-supplied userId,
+    // even inside a signed cookie, as the identity authority.
     return {
-      userId: decoded.userId,
-      email: decoded.email.trim().toLowerCase(),
+      userId: userIdFromEmail(email),
+      email,
     };
   } catch {
     return null;

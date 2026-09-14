@@ -1,4 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import {
+  assertCapacitorServerUrlSafeForProduction,
+  resolveCapacitorServerUrl,
+} from "./src/lib/mobile/capacitorServerUrl";
 
 /**
  * Capacitor wraps the existing Next.js App Router app.
@@ -8,8 +12,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * `webDir` holds a minimal placeholder only so Capacitor CLI can sync;
  * browser users continue to use Next.js directly.
  */
-const serverUrl =
-  process.env.CAPACITOR_SERVER_URL?.trim() || "http://localhost:3000";
+const serverUrl = resolveCapacitorServerUrl();
+assertCapacitorServerUrlSafeForProduction(serverUrl);
 
 const config: CapacitorConfig = {
   appId: "com.thinkroman.aicare",

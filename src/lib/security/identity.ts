@@ -1,5 +1,8 @@
+import {
+  getAuthenticatedSession,
+  userIdFromEmail,
+} from "@/lib/security/auth";
 import { resolveAnonymousDeviceId } from "@/lib/security/session";
-import { getAuthenticatedSession } from "@/lib/security/auth";
 
 export type RequestIdentity = {
   deviceId: string;
@@ -12,13 +15,14 @@ export type IdentityResolver = () => Promise<RequestIdentity>;
 /**
  * Resolves server-side ownership.
  * Device id always comes from the HttpOnly device cookie — never from the client body.
- * User id comes only from the signed HttpOnly auth session cookie.
+ * User id comes only from the signed HttpOnly auth session cookie (re-derived from email).
+ * Client-supplied userId fields in request bodies are ignored.
  */
 export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const deviceId = await resolveAnonymousDeviceId();
   const session = await getAuthenticatedSession();
   return {
     deviceId,
-    userId: session?.userId ?? null,
+    userId: session ? userIdFromEmail(session.email) : null,
   };
 }

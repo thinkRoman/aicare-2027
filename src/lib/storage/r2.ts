@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -10,6 +11,12 @@ import { randomUUID } from "node:crypto";
 export const R2_UPLOAD_TTL_SECONDS = 300;
 /** Presigned download lifetime (15 minutes). */
 export const R2_DOWNLOAD_TTL_SECONDS = 900;
+/**
+ * Product default image retention (days) for private R2 objects.
+ * Lifecycle enforcement is an ops/bucket rule; application deletion is immediate
+ * when an encounter is purged.
+ */
+export const R2_IMAGE_RETENTION_DAYS = 30;
 
 const ALLOWED_CONTENT_TYPES = {
   "image/jpeg": "jpg",
@@ -34,10 +41,17 @@ export type R2Config = {
   region: string;
 };
 
-export type R2PresignDependencies = {
+export type R2ClientDependencies = {
   getSignedUrl: typeof getSignedUrl;
   createClient: (config: R2Config) => S3Client;
+  sendDelete?: (
+    client: S3Client,
+    command: DeleteObjectCommand,
+  ) => Promise<unknown>;
 };
+
+/** @deprecated Use R2ClientDependencies */
+export type R2PresignDependencies = R2ClientDependencies;
 
 export function resolveR2Endpoint(
   accountId: string,
@@ -263,6 +277,30 @@ export async function generatePresignedDownloadUrl(
     downloadUrl,
     expiresInSeconds: R2_DOWNLOAD_TTL_SECONDS,
   };
+}
+
+/**
+ * Permanently deletes a private R2 object. Never accepts a public URL.
+ */
+export async function deletePrivateObject(
+  params: { objectKey: string },
+  dependencies: R2ClientDependencies = defaultDependencies,
+): Promise<{ objectKey: string; deleted: true }> {
+  const config = loadR2Config();
+  const objectKey = assertPrivateObjectKey(params.objectKey);
+  const client = dependencies.createClient(config);
+  const command = new DeleteObjectCommand({
+    Bucket: config.bucketName,
+    Key: objectKey,
+  });
+
+  if (dependencies.sendDelete) {
+    await dependencies.sendDelete(client, command);
+  } else {
+    await client.send(command);
+  }
+
+  return { objectKey, deleted: true };
 }
 
 /** Exported for tests that need to assert env loading without network I/O. */

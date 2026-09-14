@@ -1,6 +1,9 @@
 /**
  * Strips common identifying information from free-text intake before AI invocation.
- * This is a safety preprocessing step, not a guarantee of full de-identification.
+ *
+ * Gate 6 privacy note: this is best-effort pattern redaction only.
+ * It is not complete de-identification, not HIPAA Safe Harbor, and not a
+ * substitute for clinical data governance. Residual PII may remain.
  */
 export function stripCommonPii(text: string): string {
   let result = text;

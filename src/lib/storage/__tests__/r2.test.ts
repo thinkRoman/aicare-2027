@@ -2,10 +2,12 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   R2_DOWNLOAD_TTL_SECONDS,
+  R2_IMAGE_RETENTION_DAYS,
   R2_UPLOAD_TTL_SECONDS,
   assertPrivateObjectKey,
   buildEncounterObjectKey,
   createR2S3Client,
+  deletePrivateObject,
   generatePresignedDownloadUrl,
   generatePresignedUploadUrl,
   loadR2Config,
@@ -165,5 +167,28 @@ describe("Cloudflare R2 via S3 API", () => {
       expect.anything(),
       { expiresIn: 900 },
     );
+  });
+
+  it("deletes private objects by key and never accepts public URLs", async () => {
+    expect(R2_IMAGE_RETENTION_DAYS).toBe(30);
+    const sendDelete = vi.fn(async () => undefined);
+    const createClient = vi.fn(() => ({}) as S3Client);
+
+    const result = await deletePrivateObject(
+      { objectKey: "encounters/enc42/obj42.webp" },
+      { getSignedUrl: vi.fn(), createClient, sendDelete },
+    );
+
+    expect(result).toEqual({
+      objectKey: "encounters/enc42/obj42.webp",
+      deleted: true,
+    });
+    expect(sendDelete).toHaveBeenCalledOnce();
+    await expect(
+      deletePrivateObject(
+        { objectKey: "https://cdn.example/public.jpg" },
+        { getSignedUrl: vi.fn(), createClient, sendDelete },
+      ),
+    ).rejects.toThrow(/private|URL/i);
   });
 });

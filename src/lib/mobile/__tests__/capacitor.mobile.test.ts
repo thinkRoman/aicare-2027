@@ -22,7 +22,9 @@ describe("Capacitor wrap-mode configuration", () => {
     expect(config).toMatch(/server\s*:\s*\{[\s\S]*url:/);
     expect(config).toContain("webDir");
     expect(config.toLowerCase()).not.toContain('output: "export"');
-    expect(config).toMatch(/localhost:3000|CAPACITOR_SERVER_URL/);
+    expect(config).toMatch(
+      /resolveCapacitorServerUrl|CAPACITOR_SERVER_URL|localhost:3000/,
+    );
   });
 
   it("keeps a placeholder web dir for CLI sync only", () => {
