@@ -1,3 +1,5 @@
+import { PRODUCT_BRAND } from "@/lib/brand";
+
 export default function HomePage() {
-  return <main>aiCare 2027</main>;
+  return <main>{PRODUCT_BRAND}</main>;
 }

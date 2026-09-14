@@ -2,7 +2,7 @@
   "name": "aicare-2027",
   "version": "0.1.0",
   "private": true,
-  "description": "aiCare 2027 consumer health triage guidance companion",
+  "description": "aiCARE consumer health triage guidance companion",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
