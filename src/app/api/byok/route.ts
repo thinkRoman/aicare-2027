@@ -20,6 +20,10 @@ const ByokDisableSchema = z.object({
   action: z.literal("disable"),
 });
 
+const ByokEnableSchema = z.object({
+  action: z.literal("enable"),
+});
+
 const ByokDeleteSchema = z.object({
   action: z.literal("delete"),
 });
@@ -27,6 +31,7 @@ const ByokDeleteSchema = z.object({
 const ByokRequestSchema = z.union([
   ByokUpsertSchema,
   ByokDisableSchema,
+  ByokEnableSchema,
   ByokDeleteSchema,
 ]);
 
@@ -132,6 +137,26 @@ export async function PUT(request: Request): Promise<Response> {
     if (!doc) {
       return NextResponse.json(
         { ok: false, message: "No BYOK configuration to disable" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      config: sanitizedResponse(doc),
+    });
+  }
+
+  if (parsed.data.action === "enable") {
+    const doc = await UserAiConfig.findOneAndUpdate(
+      { userId },
+      { $set: { disabled: false } },
+      { new: true },
+    ).lean();
+
+    if (!doc) {
+      return NextResponse.json(
+        { ok: false, message: "No BYOK configuration to enable" },
         { status: 404 },
       );
     }
