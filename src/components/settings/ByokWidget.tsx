@@ -37,8 +37,8 @@ const PROVIDER_OPTIONS: ProviderOption[] = [
   { id: "local", label: "Local / OpenAI-compatible", available: true },
 ];
 
-const AVAILABLE_SET = new Set<string>(IMPLEMENTED_AI_PROVIDERS);
-const RESERVED_SET = new Set<string>(FUTURE_AI_PROVIDER_IDS);
+const AVAILABLE = new Set<string>(IMPLEMENTED_AI_PROVIDERS);
+const RESERVED = new Set<string>(FUTURE_AI_PROVIDER_IDS);
 
 export function ByokWidget({ authenticated }: ByokWidgetProps) {
   const [config, setConfig] = useState<ByokSanitizedConfig | null>(null);
@@ -55,25 +55,32 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
       setConfig(null);
       return;
     }
-    const response = await fetch("/api/byok");
-    const json = (await response.json()) as {
-      ok: boolean;
-      config: ByokSanitizedConfig | null;
-      message?: string;
-    };
-    if (!response.ok || !json.ok) {
-      setError(json.message ?? "Unable to load AI configuration.");
-      return;
-    }
-    setConfig(json.config);
-    if (json.config && AVAILABLE_SET.has(json.config.provider)) {
-      setProvider(json.config.provider as ImplementedAiProvider);
-      setSelectedModel(json.config.selectedModel);
+    try {
+      const response = await fetch("/api/byok");
+      const json = (await response.json()) as {
+        ok: boolean;
+        config: ByokSanitizedConfig | null;
+        message?: string;
+      };
+      if (!response.ok || !json.ok) {
+        setError(json.message ?? "Unable to load AI configuration.");
+        return;
+      }
+      setConfig(json.config);
+      if (json.config && AVAILABLE.has(json.config.provider)) {
+        setProvider(json.config.provider as ImplementedAiProvider);
+        setSelectedModel(json.config.selectedModel);
+      }
+    } catch {
+      setError("Unable to load AI configuration.");
     }
   }, [authenticated]);
 
   useEffect(() => {
-    void loadConfig();
+    const timer = window.setTimeout(() => {
+      void loadConfig();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadConfig]);
 
   if (!authenticated) {
@@ -89,8 +96,8 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
           Advanced AI configuration unavailable
         </h2>
         <p className="mt-2 text-sm text-slate-700">
-          Sign in to manage your encrypted provider credentials. Anonymous
-          visitors cannot save a personal AI configuration.
+          Sign in to manage encrypted provider credentials. Anonymous visitors
+          cannot save a personal AI configuration.
         </p>
       </section>
     );
@@ -112,10 +119,7 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
         message?: string;
       };
       if (!response.ok || !json.ok) {
-        setError(
-          json.message ??
-            "Configured AI provider request failed. Check your settings or remove your key to use default triage.",
-        );
+        setError(json.message ?? "Unable to update AI configuration.");
         return;
       }
       setConfig(json.config);
@@ -134,7 +138,7 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
-    if (RESERVED_SET.has(provider) || !AVAILABLE_SET.has(provider)) {
+    if (RESERVED.has(provider) || !AVAILABLE.has(provider)) {
       setError("That provider is not available yet.");
       return;
     }
@@ -146,7 +150,6 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
       setError("Enter a credential to save or replace this configuration.");
       return;
     }
-
     await mutate({
       action: "upsert",
       provider,
@@ -204,9 +207,7 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
 
       <form className="space-y-4" onSubmit={(event) => void handleSave(event)}>
         <fieldset>
-          <legend className="text-sm font-medium text-slate-800">
-            Provider
-          </legend>
+          <legend className="text-sm font-medium text-slate-800">Provider</legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {PROVIDER_OPTIONS.map((option) => {
               const selected = provider === option.id;
@@ -216,7 +217,6 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
                   type="button"
                   disabled={!option.available}
                   aria-pressed={selected}
-                  aria-disabled={!option.available}
                   className={`inline-flex min-h-12 items-center justify-between rounded-xl border px-3 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-not-allowed disabled:opacity-60 ${
                     selected
                       ? "border-teal-800 bg-teal-700 text-white"
@@ -240,10 +240,7 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
         </fieldset>
 
         <div>
-          <label
-            htmlFor="byok-model"
-            className="text-sm font-medium text-slate-800"
-          >
+          <label htmlFor="byok-model" className="text-sm font-medium text-slate-800">
             Model identifier
           </label>
           <input
@@ -284,10 +281,7 @@ export function ByokWidget({ authenticated }: ByokWidgetProps) {
         ) : null}
 
         <div>
-          <label
-            htmlFor="byok-api-key"
-            className="text-sm font-medium text-slate-800"
-          >
+          <label htmlFor="byok-api-key" className="text-sm font-medium text-slate-800">
             Provider credential
           </label>
           <input

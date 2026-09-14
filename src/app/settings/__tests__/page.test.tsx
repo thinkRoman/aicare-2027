@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "@/app/settings/page";
 
@@ -9,9 +10,9 @@ vi.mock("next/link", () => ({
     href,
     ...props
   }: {
-    children: React.ReactNode;
+    children: ReactNode;
     href: string;
-  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -61,35 +62,45 @@ describe("settings page isolation", () => {
 
   it("does not accept a client-supplied user id field for identity", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input).includes("/api/auth/session") && init?.method === "POST") {
-        return new Response(
-          JSON.stringify({
-            ok: true,
-            authenticated: true,
-            user: { userId: "server-derived", email: "person@example.com" },
-          }),
-          { status: 200 },
-        );
-      }
-      if (String(input).includes("/api/auth/session")) {
-        return new Response(
-          JSON.stringify({ ok: true, authenticated: false, user: null }),
-          { status: 200 },
-        );
-      }
-      return new Response(JSON.stringify({ ok: true, config: null }), {
-        status: 200,
-      });
-    });
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (
+          String(input).includes("/api/auth/session") &&
+          init?.method === "POST"
+        ) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              authenticated: true,
+              user: { userId: "server-derived", email: "person@example.com" },
+            }),
+            { status: 200 },
+          );
+        }
+        if (String(input).includes("/api/auth/session")) {
+          return new Response(
+            JSON.stringify({ ok: true, authenticated: false, user: null }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, config: null }), {
+          status: 200,
+        });
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     render(<SettingsPage />);
     expect(screen.queryByLabelText(/user id/i)).not.toBeInTheDocument();
 
-    await user.type(await screen.findByLabelText(/email/i), "person@example.com");
+    await user.type(
+      await screen.findByLabelText(/email/i),
+      "person@example.com",
+    );
     await user.click(
-      screen.getByRole("button", { name: /sign in to manage settings/i }),
+      screen.getAllByRole("button", {
+        name: /sign in to manage settings/i,
+      })[0]!,
     );
 
     await waitFor(() => {

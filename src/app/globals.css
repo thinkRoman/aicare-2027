@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  padding-top: var(--safe-area-top);
+  padding-right: var(--safe-area-right);
+  padding-bottom: var(--safe-area-bottom);
+  padding-left: var(--safe-area-left);
+}
+
+/* Phone-first shell: prevent clipped controls near notches / home indicators */
+.aicare-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.aicare-emergency,
+.aicare-emergency-sheet {
+  max-height: min(100dvh, 100%);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(1rem, var(--safe-area-bottom));
+  padding-left: max(1rem, var(--safe-area-left));
+  padding-right: max(1rem, var(--safe-area-right));
+}
+
+/* Landscape phones: keep emergency content reachable without clipping */
+@media (orientation: landscape) and (max-height: 500px) {
+  .aicare-emergency,
+  .aicare-emergency-sheet {
+    max-height: calc(100dvh - 1rem);
+    padding-top: max(0.5rem, var(--safe-area-top));
+  }
+}
+
+/* Prefer touch feedback over hover-only affordances */
+@media (hover: none) {
+  .hover\:bg-slate-50:hover {
+    background-color: inherit;
+  }
+}
+
+input,
+textarea,
+button,
+select {
+  touch-action: manipulation;
+}

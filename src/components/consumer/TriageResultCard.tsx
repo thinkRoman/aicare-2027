@@ -33,20 +33,15 @@ export function TriageResultCard({ result }: TriageResultCardProps) {
 
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        await navigator.share({
-          title: "aiCARE triage summary",
-          text,
-        });
+        await navigator.share({ title: "aiCARE triage summary", text });
         setShareStatus("Shared.");
         return;
       }
-
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
         setShareStatus("Copied to clipboard.");
         return;
       }
-
       setShareStatus("Sharing is unavailable on this device.");
     } catch {
       setShareStatus("Sharing was cancelled or unavailable.");
@@ -95,10 +90,7 @@ export function TriageResultCard({ result }: TriageResultCardProps) {
         </ul>
       </section>
 
-      <section
-        aria-labelledby="doctor-checklist-heading"
-        className="rounded-xl bg-slate-50 p-4"
-      >
+      <section aria-labelledby="doctor-checklist-heading" className="rounded-xl bg-slate-50 p-4">
         <h3 id="doctor-checklist-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Show your doctor
         </h3>
@@ -111,9 +103,7 @@ export function TriageResultCard({ result }: TriageResultCardProps) {
           type="button"
           className="mt-4 inline-flex min-h-12 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
           style={{ minHeight: MIN_TOUCH_TARGET_PX }}
-          onClick={() => {
-            void handleShare();
-          }}
+          onClick={() => { void handleShare(); }}
         >
           <Share2 className="h-4 w-4" aria-hidden />
           Share checklist

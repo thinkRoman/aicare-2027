@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  BYOK_FAILURE_MESSAGE,
-} from "@/services/ai/errors";
+import { BYOK_FAILURE_MESSAGE } from "@/services/ai/errors";
 import {
   CONSUMER_CONSENT_TEXT,
   MIN_TOUCH_TARGET_PX,
@@ -16,7 +14,9 @@ describe("consumer triage UI helpers", () => {
 
   it("keeps consent wording non-diagnostic", () => {
     expect(CONSUMER_CONSENT_TEXT.toLowerCase()).toContain("triage guidance");
-    expect(CONSUMER_CONSENT_TEXT.toLowerCase()).toContain("not a medical diagnosis");
+    expect(CONSUMER_CONSENT_TEXT.toLowerCase()).toContain(
+      "not a medical diagnosis",
+    );
   });
 
   it("maps urgency with text labels, not color alone", () => {

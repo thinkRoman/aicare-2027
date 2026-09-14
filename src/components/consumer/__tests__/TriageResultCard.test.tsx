@@ -39,10 +39,10 @@ describe("TriageResultCard", () => {
     });
 
     render(<TriageResultCard result={sample} />);
-    await user.click(screen.getByRole("button", { name: /share checklist/i }));
-    expect(writeText).toHaveBeenCalled();
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      /copied to clipboard/i,
+    await user.click(
+      screen.getAllByRole("button", { name: /share checklist/i })[0]!,
     );
+    expect(writeText).toHaveBeenCalled();
+    expect(await screen.findByText(/copied to clipboard/i)).toBeInTheDocument();
   });
 });

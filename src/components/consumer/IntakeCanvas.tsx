@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Loader2, Mic, MicOff, Settings } from "lucide-react";
 import {
   CameraCapture,
@@ -26,6 +20,10 @@ import {
   consumerSafeErrorMessage,
   type ConsumerTriageResponse,
 } from "@/lib/consumer/triageUi";
+import {
+  MICROPHONE_PERMISSION_DENIED_MESSAGE,
+  isPermissionDeniedError,
+} from "@/lib/mobile/permissions";
 import type { TriageResult } from "@/lib/schemas/triage";
 
 type SpeechRecognitionLike = {
@@ -39,13 +37,22 @@ type SpeechRecognitionLike = {
         results: ArrayLike<ArrayLike<{ transcript: string }>>;
       }) => void)
     | null;
-  onerror: (() => void) | null;
+  onerror: ((event?: { error?: string }) => void) | null;
   onend: (() => void) | null;
 };
 
 type IntakeCanvasProps = {
   submitTriage?: (body: unknown) => Promise<ConsumerTriageResponse>;
 };
+
+function detectSpeechSupport(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window as unknown as {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return Boolean(host.SpeechRecognition || host.webkitSpeechRecognition);
+}
 
 const defaultSmartTap: SmartTapValues = {
   ageGroup: "adult",
@@ -70,10 +77,10 @@ export function IntakeCanvas({
   submitTriage = defaultSubmitTriage,
 }: IntakeCanvasProps) {
   const [complaint, setComplaint] = useState("");
-  const [consent, setConsent] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   const [smartTap, setSmartTap] = useState<SmartTapValues>(defaultSmartTap);
   const [listening, setListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
+  const [speechSupported] = useState(detectSpeechSupport);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<
@@ -83,43 +90,17 @@ export function IntakeCanvas({
   const [imageDraft, setImageDraft] = useState<CapturedImageDraft | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  useEffect(() => {
-    const ctor =
-      typeof window !== "undefined"
-        ? (
-            window as unknown as {
-              SpeechRecognition?: new () => SpeechRecognitionLike;
-              webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-            }
-          ).SpeechRecognition ||
-          (
-            window as unknown as {
-              webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-            }
-          ).webkitSpeechRecognition
-        : undefined;
-    setSpeechSupported(Boolean(ctor));
-  }, []);
-
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
     setListening(false);
   }, []);
 
   function startListening() {
-    const ctor =
-      (
-        window as unknown as {
-          SpeechRecognition?: new () => SpeechRecognitionLike;
-          webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-        }
-      ).SpeechRecognition ||
-      (
-        window as unknown as {
-          webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-        }
-      ).webkitSpeechRecognition;
-
+    const host = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const ctor = host.SpeechRecognition || host.webkitSpeechRecognition;
     if (!ctor) {
       setError("Voice input is not available in this browser.");
       return;
@@ -137,15 +118,31 @@ export function IntakeCanvas({
         );
       }
     };
-    recognition.onerror = () => {
+    recognition.onerror = (event?: { error?: string }) => {
       setListening(false);
-      setError("Voice input stopped. You can keep typing.");
+      const denied =
+        event?.error === "not-allowed" ||
+        event?.error === "service-not-allowed";
+      setError(
+        denied
+          ? MICROPHONE_PERMISSION_DENIED_MESSAGE
+          : "Voice input stopped. You can keep typing.",
+      );
     };
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
-    setError(null);
+    try {
+      recognition.start();
+      setListening(true);
+      setError(null);
+    } catch (error) {
+      setListening(false);
+      setError(
+        isPermissionDeniedError(error)
+          ? MICROPHONE_PERMISSION_DENIED_MESSAGE
+          : "Voice input stopped. You can keep typing.",
+      );
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -154,7 +151,7 @@ export function IntakeCanvas({
     setResult(null);
     setEmergencyAction(null);
 
-    if (!consent) {
+    if (!consentGiven) {
       setError("Please confirm the consent statement before continuing.");
       return;
     }
@@ -183,6 +180,8 @@ export function IntakeCanvas({
           typeof navigator !== "undefined" ? navigator.language : undefined,
       };
 
+      void imageDraft;
+
       const response = await submitTriage(payload);
       if (!response.ok) {
         setError(consumerSafeErrorMessage(response));
@@ -202,7 +201,7 @@ export function IntakeCanvas({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-4 py-6">
+    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 overflow-x-hidden px-4 py-6">
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-800">
@@ -245,6 +244,9 @@ export function IntakeCanvas({
             rows={5}
             value={complaint}
             onChange={(event) => setComplaint(event.target.value)}
+            enterKeyHint="done"
+            autoComplete="off"
+            inputMode="text"
             className="w-full rounded-xl border border-slate-300 px-3 py-3 text-base text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
             placeholder="Describe symptoms in your own words"
           />
@@ -256,11 +258,8 @@ export function IntakeCanvas({
               disabled={!speechSupported}
               aria-pressed={listening}
               onClick={() => {
-                if (listening) {
-                  stopListening();
-                } else {
-                  startListening();
-                }
+                if (listening) stopListening();
+                else startListening();
               }}
             >
               {listening ? (
@@ -290,8 +289,8 @@ export function IntakeCanvas({
         <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-teal-50/60 p-4">
           <input
             type="checkbox"
-            checked={consent}
-            onChange={(event) => setConsent(event.target.checked)}
+            checked={consentGiven}
+            onChange={(event) => setConsentGiven(event.target.checked)}
             className="mt-1 h-5 w-5 accent-teal-700"
             aria-required="true"
           />

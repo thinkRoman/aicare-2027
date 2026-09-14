@@ -28,10 +28,7 @@ export default function SettingsPage() {
         message?: string;
       };
       if (json.message && !json.authenticated) {
-        setSession({
-          status: "unavailable",
-          message: json.message,
-        });
+        setSession({ status: "unavailable", message: json.message });
         return;
       }
       if (json.authenticated && json.user) {
@@ -52,7 +49,10 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    void refreshSession();
+    const timer = window.setTimeout(() => {
+      void refreshSession();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refreshSession]);
 
   async function signIn(event: FormEvent) {
@@ -92,7 +92,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-4 py-6">
+    <main className="aicare-shell mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 overflow-x-hidden px-4 py-6">
       <header className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-800">
           {PRODUCT_BRAND}
@@ -135,7 +135,10 @@ export default function SettingsPage() {
             fields as authoritative identity.
           </p>
           <form className="space-y-3" onSubmit={(event) => void signIn(event)}>
-            <label htmlFor="settings-email" className="text-sm font-medium text-slate-800">
+            <label
+              htmlFor="settings-email"
+              className="text-sm font-medium text-slate-800"
+            >
               Email
             </label>
             <input
@@ -147,6 +150,11 @@ export default function SettingsPage() {
               className="w-full rounded-xl border border-slate-300 px-3 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
               style={{ minHeight: MIN_TOUCH_TARGET_PX }}
               autoComplete="email"
+              inputMode="email"
+              enterKeyHint="go"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
             <button
               type="submit"

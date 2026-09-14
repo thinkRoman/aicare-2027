@@ -36,3 +36,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Capacitor native shells are generated for Gate 5 packaging readiness.
+# They are not signed, submitted, or released in this gate.
+/ios
+/android
+/.capacitor

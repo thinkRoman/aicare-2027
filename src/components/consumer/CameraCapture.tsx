@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, RefreshCw, SkipForward } from "lucide-react";
 import { MIN_TOUCH_TARGET_PX } from "@/lib/consumer/triageUi";
+import { CAMERA_PERMISSION_DENIED_MESSAGE } from "@/lib/mobile/permissions";
 
 export type CaptureQuality = {
   acceptable: boolean;
@@ -38,8 +39,12 @@ function assessImageQuality(imageData: ImageData): CaptureQuality {
 
       const right = data[index + 4] ?? r;
       const below = data[((y + 1) * width + x) * 4] ?? r;
-      edgeTotal += Math.abs(luminance - (0.2126 * right + 0.7152 * g + 0.0722 * b));
-      edgeTotal += Math.abs(luminance - (0.2126 * below + 0.7152 * g + 0.0722 * b));
+      edgeTotal += Math.abs(
+        luminance - (0.2126 * right + 0.7152 * g + 0.0722 * b),
+      );
+      edgeTotal += Math.abs(
+        luminance - (0.2126 * below + 0.7152 * g + 0.0722 * b),
+      );
       samples += 1;
     }
   }
@@ -48,20 +53,11 @@ function assessImageQuality(imageData: ImageData): CaptureQuality {
   const averageEdge = samples === 0 ? 0 : edgeTotal / samples;
   const issues: string[] = [];
 
-  if (averageBrightness < 45) {
-    issues.push("low_light");
-  }
-  if (averageBrightness > 230) {
-    issues.push("glare");
-  }
-  if (averageEdge < 8) {
-    issues.push("motion_blur");
-  }
+  if (averageBrightness < 45) issues.push("low_light");
+  if (averageBrightness > 230) issues.push("glare");
+  if (averageEdge < 8) issues.push("motion_blur");
 
-  return {
-    acceptable: issues.length === 0,
-    issues,
-  };
+  return { acceptable: issues.length === 0, issues };
 }
 
 export function CameraCapture({ onCapture }: CameraCaptureProps) {
@@ -71,45 +67,55 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   async function handleFile(file: File | undefined) {
+    // Permission prompts only occur after the user taps Add/Retry photo.
+    // Cancelled pickers and denied camera access must not block triage.
     if (!file) {
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    const image = new Image();
-    image.src = objectUrl;
-    await image.decode();
-
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.min(image.width, 640);
-    canvas.height = Math.round((image.height / image.width) * canvas.width);
-    const context = canvas.getContext("2d");
-    if (!context) {
-      setMessage("Unable to check image quality. You can skip the photo.");
-      return;
-    }
-
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const quality = assessImageQuality(imageData);
-
-    if (!quality.acceptable) {
-      const nextFailures = failedAttempts + 1;
-      setFailedAttempts(nextFailures);
-      setPreviewUrl(objectUrl);
-      onCapture(null);
       setMessage(
-        nextFailures >= MAX_FAILED_ATTEMPTS
-          ? "Photo quality is still unclear. You can retry or skip and continue without a photo."
-          : "Photo looks too dark, bright, or blurry. Try again with steadier lighting.",
+        "No photo selected. You can continue without a photo, enable camera access in device settings, then try again.",
       );
       return;
     }
 
-    setFailedAttempts(0);
-    setPreviewUrl(objectUrl);
-    setMessage(null);
-    onCapture({ file, previewUrl: objectUrl, quality });
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.src = objectUrl;
+      await image.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(image.width, 640);
+      canvas.height = Math.round((image.height / image.width) * canvas.width);
+      const context = canvas.getContext("2d");
+      if (!context) {
+        setMessage("Unable to check image quality. You can skip the photo.");
+        return;
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const quality = assessImageQuality(imageData);
+
+      if (!quality.acceptable) {
+        const nextFailures = failedAttempts + 1;
+        setFailedAttempts(nextFailures);
+        setPreviewUrl(objectUrl);
+        onCapture(null);
+        setMessage(
+          nextFailures >= MAX_FAILED_ATTEMPTS
+            ? "Photo quality is still unclear. You can retry or skip and continue without a photo."
+            : "Photo looks too dark, bright, or blurry. Try again with steadier lighting.",
+        );
+        return;
+      }
+
+      setFailedAttempts(0);
+      setPreviewUrl(objectUrl);
+      setMessage(null);
+      onCapture({ file, previewUrl: objectUrl, quality });
+    } catch {
+      setMessage(CAMERA_PERMISSION_DENIED_MESSAGE);
+      onCapture(null);
+    }
   }
 
   return (

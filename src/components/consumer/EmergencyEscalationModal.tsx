@@ -18,9 +18,9 @@ export function EmergencyEscalationModal({
       aria-modal="true"
       aria-labelledby="emergency-title"
       aria-describedby="emergency-description"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-red-950/80 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-red-950/80 p-4 sm:items-center"
     >
-      <div className="w-full max-w-lg rounded-3xl border-2 border-red-200 bg-white p-6 text-slate-900 shadow-2xl">
+      <div className="aicare-emergency-sheet w-full max-w-lg rounded-3xl border-2 border-red-200 bg-white p-6 text-slate-900 shadow-2xl">
         <div className="flex items-center gap-3 text-red-800">
           <PhoneCall className="h-7 w-7" aria-hidden />
           <h2 id="emergency-title" className="text-2xl font-bold">

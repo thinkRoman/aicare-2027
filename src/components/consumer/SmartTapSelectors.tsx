@@ -83,9 +83,7 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
         <ToggleChip
           label="Fever"
           pressed={value.feverIndicated}
-          onPressedChange={(feverIndicated) =>
-            onChange({ ...value, feverIndicated })
-          }
+          onPressedChange={(feverIndicated) => onChange({ ...value, feverIndicated })}
         />
         <ToggleChip
           label="Pregnancy"
@@ -106,16 +104,12 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
         <p className="mt-1 text-sm text-slate-600">
           Tap what fits. You can skip anything that does not apply.
         </p>
-
         <OptionRow
           legend="When did it start?"
           options={ONSET_OPTIONS}
           selected={value.anamnesis.onset}
           onSelect={(onset) =>
-            onChange({
-              ...value,
-              anamnesis: { ...value.anamnesis, onset },
-            })
+            onChange({ ...value, anamnesis: { ...value.anamnesis, onset } })
           }
         />
         <OptionRow
@@ -123,10 +117,7 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
           options={PROVOCATION_OPTIONS}
           selected={value.anamnesis.provocation}
           onSelect={(provocation) =>
-            onChange({
-              ...value,
-              anamnesis: { ...value.anamnesis, provocation },
-            })
+            onChange({ ...value, anamnesis: { ...value.anamnesis, provocation } })
           }
         />
         <OptionRow
@@ -134,10 +125,7 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
           options={QUALITY_OPTIONS}
           selected={value.anamnesis.quality}
           onSelect={(quality) =>
-            onChange({
-              ...value,
-              anamnesis: { ...value.anamnesis, quality },
-            })
+            onChange({ ...value, anamnesis: { ...value.anamnesis, quality } })
           }
         />
         <OptionRow
@@ -145,10 +133,7 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
           options={RADIATION_OPTIONS}
           selected={value.anamnesis.radiation}
           onSelect={(radiation) =>
-            onChange({
-              ...value,
-              anamnesis: { ...value.anamnesis, radiation },
-            })
+            onChange({ ...value, anamnesis: { ...value.anamnesis, radiation } })
           }
         />
         <OptionRow
@@ -156,13 +141,9 @@ export function SmartTapSelectors({ value, onChange }: SmartTapSelectorsProps) {
           options={TIMING_OPTIONS}
           selected={value.anamnesis.timing}
           onSelect={(timing) =>
-            onChange({
-              ...value,
-              anamnesis: { ...value.anamnesis, timing },
-            })
+            onChange({ ...value, anamnesis: { ...value.anamnesis, timing } })
           }
         />
-
         <div className="mt-4">
           <label htmlFor="severity" className="text-sm font-medium text-slate-800">
             Severity: {severityLabel} / 10
