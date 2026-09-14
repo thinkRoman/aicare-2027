@@ -6,7 +6,9 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 
+/** Presigned upload lifetime (5 minutes). */
 export const R2_UPLOAD_TTL_SECONDS = 300;
+/** Presigned download lifetime (15 minutes). */
 export const R2_DOWNLOAD_TTL_SECONDS = 900;
 
 const ALLOWED_CONTENT_TYPES = {
@@ -17,11 +19,19 @@ const ALLOWED_CONTENT_TYPES = {
 
 export type AllowedImageContentType = keyof typeof ALLOWED_CONTENT_TYPES;
 
+/**
+ * Cloudflare R2 is connected only through the S3-compatible API.
+ * Buckets remain private; callers receive short-lived signed URLs only.
+ */
 export type R2Config = {
   accountId: string;
   accessKeyId: string;
   secretAccessKey: string;
   bucketName: string;
+  /** S3 API endpoint: https://<ACCOUNT_ID>.r2.cloudflarestorage.com */
+  endpoint: string;
+  /** Cloudflare R2 region is always "auto" unless overridden. */
+  region: string;
 };
 
 export type R2PresignDependencies = {
@@ -29,18 +39,47 @@ export type R2PresignDependencies = {
   createClient: (config: R2Config) => S3Client;
 };
 
+export function resolveR2Endpoint(
+  accountId: string,
+  explicitEndpoint?: string,
+): string {
+  const trimmed = explicitEndpoint?.trim();
+  if (trimmed) {
+    if (!/^https:\/\//i.test(trimmed)) {
+      throw new Error("R2_ENDPOINT must be an https:// S3 API URL");
+    }
+    if (trimmed.includes("..")) {
+      throw new Error("R2_ENDPOINT must not contain path traversal");
+    }
+    return trimmed.replace(/\/+$/, "");
+  }
+
+  if (!accountId.trim()) {
+    throw new Error("R2_ACCOUNT_ID is required to resolve the S3 endpoint");
+  }
+
+  return `https://${accountId}.r2.cloudflarestorage.com`;
+}
+
+/**
+ * S3 client for Cloudflare R2.
+ * forcePathStyle is required for R2's S3-compatible API.
+ */
+export function createR2S3Client(config: R2Config): S3Client {
+  return new S3Client({
+    region: config.region,
+    endpoint: config.endpoint,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+    forcePathStyle: true,
+  });
+}
+
 const defaultDependencies: R2PresignDependencies = {
   getSignedUrl,
-  createClient(config: R2Config): S3Client {
-    return new S3Client({
-      region: "auto",
-      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-    });
-  },
+  createClient: createR2S3Client,
 };
 
 function requireEnv(name: string): string {
@@ -54,29 +93,32 @@ function requireEnv(name: string): string {
 export function loadR2Config(
   env: NodeJS.ProcessEnv = process.env,
 ): R2Config {
-  const accountId = env.R2_ACCOUNT_ID;
-  const accessKeyId = env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
-  const bucketName = env.R2_BUCKET_NAME;
+  const accountId = env.R2_ACCOUNT_ID?.trim() ?? "";
+  const accessKeyId = env.R2_ACCESS_KEY_ID?.trim() ?? "";
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY?.trim() ?? "";
+  const bucketName = env.R2_BUCKET_NAME?.trim() ?? "";
+  const region = env.R2_REGION?.trim() || "auto";
 
-  if (!accountId?.trim()) {
+  if (!accountId) {
     throw new Error("R2_ACCOUNT_ID is missing or empty");
   }
-  if (!accessKeyId?.trim()) {
+  if (!accessKeyId) {
     throw new Error("R2_ACCESS_KEY_ID is missing or empty");
   }
-  if (!secretAccessKey?.trim()) {
+  if (!secretAccessKey) {
     throw new Error("R2_SECRET_ACCESS_KEY is missing or empty");
   }
-  if (!bucketName?.trim()) {
+  if (!bucketName) {
     throw new Error("R2_BUCKET_NAME is missing or empty");
   }
 
   return {
-    accountId: accountId.trim(),
-    accessKeyId: accessKeyId.trim(),
-    secretAccessKey: secretAccessKey.trim(),
-    bucketName: bucketName.trim(),
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucketName,
+    endpoint: resolveR2Endpoint(accountId, env.R2_ENDPOINT),
+    region,
   };
 }
 
@@ -198,7 +240,11 @@ export async function generatePresignedUploadUrl(
 export async function generatePresignedDownloadUrl(
   params: { objectKey: string },
   dependencies: R2PresignDependencies = defaultDependencies,
-): Promise<{ objectKey: string; downloadUrl: string; expiresInSeconds: number }> {
+): Promise<{
+  objectKey: string;
+  downloadUrl: string;
+  expiresInSeconds: number;
+}> {
   const config = loadR2Config();
   const objectKey = assertPrivateObjectKey(params.objectKey);
 
